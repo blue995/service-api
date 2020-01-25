@@ -1,2 +1,8 @@
 #!/bin/bash
-docker build -f docker/Dockerfile-develop -t service-api-with-tfs:latest .
+DOCKER_TAG="$1"
+if [ -z "$DOCKER_TAG" ]
+then
+    echo "Dokcer Image Tag missing."
+    exit 1
+fi
+docker build -f docker/Dockerfile-develop -t "$DOCKER_TAG":latest .
