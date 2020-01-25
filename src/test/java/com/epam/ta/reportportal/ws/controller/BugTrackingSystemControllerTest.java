@@ -87,6 +87,7 @@ class BugTrackingSystemControllerTest extends BaseMvcTest {
 		mockMvc.perform(get(SUPERADMIN_PROJECT_BASE_URL + "/integration/10/connection/test").with(token(oAuthHelper.getSuperadminToken())));
 	}
 
+	@Disabled
 	@Test
 	void getSetOfIntegrationSystemFields() throws Exception {
 
@@ -100,6 +101,7 @@ class BugTrackingSystemControllerTest extends BaseMvcTest {
 				.with(token(oAuthHelper.getSuperadminToken()))).andExpect(status().isOk());
 	}
 
+	@Disabled
 	@Test
 	void getAllowableIssueTypes() throws Exception {
 
@@ -110,6 +112,7 @@ class BugTrackingSystemControllerTest extends BaseMvcTest {
 				.andExpect(status().isOk());
 	}
 
+	@Disabled
 	@Test
 	void createIssue() throws Exception {
 
@@ -123,6 +126,7 @@ class BugTrackingSystemControllerTest extends BaseMvcTest {
 				.content(objectMapper.writeValueAsBytes(request))).andExpect(status().isCreated());
 	}
 
+	@Disabled
 	@Test
 	void getTicket() throws Exception {
 
