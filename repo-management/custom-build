@@ -6,4 +6,7 @@ then
     echo "Docker Image Tag missing."
     exit 1
 fi
+
+echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
 docker build -f "$BASEDIR"/../docker/Dockerfile-develop -t "$DOCKER_TAG":latest "$BASEDIR"/../.
+echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
