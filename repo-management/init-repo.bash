@@ -7,6 +7,7 @@ cd "$BASEDIR"/..
 git remote rename origin patched
 git remote add origin https://github.com/reportportal/service-api.git
 git fetch origin
+git branch develop
 git branch develop --set-upstream-to origin/develop
 git branch master
 git branch master --set-upstream-to origin/master
