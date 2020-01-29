@@ -11,11 +11,8 @@ fi
 echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
 if [ -z $VERSION_TAG ]
 then 
-    docker build -f "$BASEDIR"/../docker/Dockerfile-develop -t "$DOCKER_TAG":latest "$BASEDIR"/../.
+    docker build -f "$BASEDIR"/../docker/Dockerfile-develop --cache-from "$DOCKER_TAG":latest --tag "$DOCKER_TAG":latest "$BASEDIR"/../.
 else
-    docker build -f "$BASEDIR"/../docker/Dockerfile-develop -t "$DOCKER_TAG":latest -t "$DOCKER_TAG":"$VERSION_TAG" "$BASEDIR"/../.
+    docker build -f "$BASEDIR"/../docker/Dockerfile-develop --cache-from "$DOCKER_TAG":latest --tag "$DOCKER_TAG":latest --tag "$DOCKER_TAG":"$VERSION_TAG" "$BASEDIR"/../.
 fi
 echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
-
-
-#--cache-from "$DOCKER_TAG":latest
