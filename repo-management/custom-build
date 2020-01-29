@@ -1,5 +1,6 @@
 #!/bin/bash
 DOCKER_TAG="$1"
+VERSION_TAG="$2"
 BASEDIR=$(dirname "$0")
 if [ -z "$DOCKER_TAG" ]
 then
@@ -8,5 +9,13 @@ then
 fi
 
 echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
-docker build -f "$BASEDIR"/../docker/Dockerfile-develop -t "$DOCKER_TAG":latest "$BASEDIR"/../.
+if [ -z $VERSION_TAG ]
+then 
+    docker build -f "$BASEDIR"/../docker/Dockerfile-develop -t "$DOCKER_TAG":latest "$BASEDIR"/../.
+else
+    docker build -f "$BASEDIR"/../docker/Dockerfile-develop -t "$DOCKER_TAG":latest -t "$DOCKER_TAG":"$VERSION_TAG" "$BASEDIR"/../.
+fi
 echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
+
+
+#--cache-from "$DOCKER_TAG":latest
