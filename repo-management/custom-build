@@ -1,12 +1,22 @@
 #!/bin/bash
+
 DOCKER_TAG="$1"
 VERSION_TAG="$2"
 BASEDIR=$(dirname "$0")
+
 if [ -z "$DOCKER_TAG" ]
 then
     echo "Docker Image Tag missing."
     exit 1
 fi
+
+check_return() {
+    local $ret=$?
+    if [ $ret -ne 0 ]
+    then
+        exit $ret
+    fi
+}
 
 echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
 if [ -z $VERSION_TAG ]
@@ -15,4 +25,5 @@ then
 else
     docker build -f "$BASEDIR"/../docker/Dockerfile-develop --cache-from "$DOCKER_TAG":latest --tag "$DOCKER_TAG":latest --tag "$DOCKER_TAG":"$VERSION_TAG" "$BASEDIR"/../.
 fi
+check_return
 echo "CAUTION: This build won't succeed if this repository is a submodule of another repository!"
