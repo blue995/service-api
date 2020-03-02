@@ -11,7 +11,7 @@ then
 fi
 
 check_return() {
-    local $ret=$?
+    local ret=$?
     if [ $ret -ne 0 ]
     then
         exit $ret
