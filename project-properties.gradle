@@ -3,12 +3,12 @@ targetCompatibility = JavaVersion.VERSION_11
 
 project.ext {
     limits = [
-            'instruction': 70,
-            'branch'     : 53,
-            'line'       : 75,
-            'complexity' : 60,
-            'method'     : 65,
-            'class'      : 90
+            // 'instruction': 70,
+            // 'branch'     : 53,
+            // 'line'       : 75,
+            // 'complexity' : 60,
+            // 'method'     : 65,
+            // 'class'      : 90
     ]
     isDebugMode = System.getProperty("DEBUG", "false") == "true"
     releaseMode = project.hasProperty("releaseMode")
