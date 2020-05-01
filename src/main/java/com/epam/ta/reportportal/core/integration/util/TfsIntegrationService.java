@@ -43,7 +43,7 @@ public class TfsIntegrationService extends AbstractBtsIntegrationService {
 	private final BasicTextEncryptor basicTextEncryptor;
 
 	@Autowired
-	public TfsIntegrationService(IntegrationRepository integrationRepository, PluginBox pluginBox) {
+	public TfsIntegrationService(IntegrationRepository integrationRepository, PluginBox pluginBox, BasicTextEncryptor basicTextEncryptor) {
 		super(integrationRepository, pluginBox);
 		this.basicTextEncryptor = basicTextEncryptor;
 	}
