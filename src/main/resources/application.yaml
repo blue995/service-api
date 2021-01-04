@@ -55,12 +55,16 @@ rp:
     recalculate: false
   environment:
     variable:
+      job:
+        delay: P7D
       flushing:
         time: PT24H
       clean:
         attach: P3D
         logs: P7D
-        launches: P7D
+        launches: P14D
+        items:
+          size: 500
       history:
         old: false
       executor:
@@ -77,7 +81,7 @@ rp:
             core: 10
             max: 20
             queue: 50
-          health-check-table:
+          widget-view:
             core: 3
             max: 5
             queue: 100
@@ -123,7 +127,7 @@ rp:
   analytics:
     enableByDefault: true
   plugins:
-    rootDir: /plugins
+    rootDir: /tmp/plugins
     path: ${rp.plugins.rootDir}/resolved
     resources:
       path: ${rp.plugins.rootDir}/resources
