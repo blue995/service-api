@@ -4,6 +4,9 @@
 
 Implementation based on `com.epam.ta.reportportal.core.integration.util.RallyIntegrationService.java`
 
+## IntegrationConfig
+TFS added to `com.epam.ta.reportportal.core.configs.IntegrationConfig.java`
+
 ## project-properties.gradle
 
 Reduced line coverage from 75 % to 70 %
