@@ -12,7 +12,7 @@ env:
     - JAVA_TOOL_OPTIONS=-Dhttps.protocols=TLSv1.2
 
 jdk:
-  - openjdk11
+  - openjdk12
 
 notifications:
   slack: reportportal-dev:fl6xWHVQp1jvsMmCJxYW9YKP
