@@ -46,6 +46,7 @@ public class IntegrationConfig implements ApplicationContextAware {
 				.put("tfs", applicationContext.getBean(TfsIntegrationService.class))
 				.put("email", applicationContext.getBean(EmailServerIntegrationService.class))
 				.put("saucelabs", applicationContext.getBean(SauceLabsIntegrationService.class))
+				.put("Azure DevOps", applicationContext.getBean(AzureIntegrationService.class))
 				.build();
 
 	}
