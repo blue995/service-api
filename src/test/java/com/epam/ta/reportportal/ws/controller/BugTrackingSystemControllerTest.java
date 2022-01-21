@@ -152,6 +152,7 @@ class BugTrackingSystemControllerTest extends BaseMvcTest {
 		);
 	}
 
+    @Disabled
 	@Test
 	void getTicket() throws Exception {
 
