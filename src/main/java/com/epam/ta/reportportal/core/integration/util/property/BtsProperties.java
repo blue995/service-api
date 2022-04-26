@@ -30,7 +30,8 @@ public enum BtsProperties {
 	PROJECT("project"),
 	AUTH_TYPE("authType"),
 	OAUTH_ACCESS_KEY("oauthAccessKey"),
-	URL("url");
+	URL("url"),
+	ATTACHMENT_URL("attachmentUrl");
 
 	private final String name;
 

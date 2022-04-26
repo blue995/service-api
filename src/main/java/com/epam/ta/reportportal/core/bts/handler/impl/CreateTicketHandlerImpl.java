@@ -24,6 +24,7 @@ import com.epam.ta.reportportal.core.bts.handler.CreateTicketHandler;
 import com.epam.ta.reportportal.core.events.MessageBus;
 import com.epam.ta.reportportal.core.events.activity.TicketPostedEvent;
 import com.epam.ta.reportportal.core.integration.GetIntegrationHandler;
+import com.epam.ta.reportportal.core.integration.util.property.BtsProperties;
 import com.epam.ta.reportportal.core.plugin.PluginBox;
 import com.epam.ta.reportportal.dao.TestItemRepository;
 import com.epam.ta.reportportal.entity.integration.Integration;
@@ -32,6 +33,7 @@ import com.epam.ta.reportportal.exception.ReportPortalException;
 import com.epam.ta.reportportal.ws.model.activity.TestItemActivityResource;
 import com.epam.ta.reportportal.ws.model.externalsystem.PostTicketRQ;
 import com.epam.ta.reportportal.ws.model.externalsystem.Ticket;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -93,6 +95,8 @@ public class CreateTicketHandlerImpl implements CreateTicketHandler {
 						).get()
 				));
 
+		integration.getParams().getParams().put(BtsProperties.USER_NAME.getName(), user.getEmail());
+		
 		Ticket ticket = btsExtension.submitTicket(postTicketRQ, integration);
 
 		before.forEach(it -> messageBus.publishActivity(new TicketPostedEvent(ticket, user.getUserId(), user.getUsername(), it)));

@@ -20,8 +20,6 @@ import com.epam.ta.reportportal.commons.validation.BusinessRule;
 import com.epam.ta.reportportal.core.integration.util.property.BtsProperties;
 import com.epam.ta.reportportal.core.plugin.PluginBox;
 import com.epam.ta.reportportal.dao.IntegrationRepository;
-import com.epam.ta.reportportal.entity.enums.AuthType;
-import com.epam.ta.reportportal.exception.ReportPortalException;
 import com.epam.ta.reportportal.ws.model.ErrorType;
 import com.google.common.collect.Maps;
 import org.apache.commons.collections4.MapUtils;
@@ -32,20 +30,16 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.epam.ta.reportportal.ws.model.ErrorType.UNABLE_INTERACT_WITH_INTEGRATION;
-
 /**
  * @author <a href="mailto:ivan_budayeu@epam.com">Ivan Budayeu</a>
  */
 @Service
 public class TfsIntegrationService extends AbstractBtsIntegrationService {
 
-	private final BasicTextEncryptor basicTextEncryptor;
 
 	@Autowired
 	public TfsIntegrationService(IntegrationRepository integrationRepository, PluginBox pluginBox, BasicTextEncryptor basicTextEncryptor) {
 		super(integrationRepository, pluginBox);
-		this.basicTextEncryptor = basicTextEncryptor;
 	}
 
 	@Override
@@ -91,6 +85,12 @@ public class TfsIntegrationService extends AbstractBtsIntegrationService {
 
 		Optional.ofNullable(integrationParams.get("defectFormFields"))
 				.ifPresent(defectFormFields -> resultParams.put("defectFormFields", defectFormFields));
+
+		BtsProperties.ATTACHMENT_URL.getParam(integrationParams)
+				.ifPresent(attachmentUrl -> resultParams.put(BtsProperties.ATTACHMENT_URL.getName(), attachmentUrl));
+		
+		BtsProperties.USER_NAME.getParam(integrationParams)
+				.ifPresent(userName -> resultParams.put(BtsProperties.USER_NAME.getName(), userName));
 
 		return resultParams;
 	}
