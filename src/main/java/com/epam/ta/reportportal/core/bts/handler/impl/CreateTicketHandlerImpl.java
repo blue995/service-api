@@ -95,7 +95,7 @@ public class CreateTicketHandlerImpl implements CreateTicketHandler {
 						).get()
 				));
 
-		integration.getParams().getParams().put(BtsProperties.USER_NAME.getName(), user.getEmail());
+		integration.getParams().getParams().put(BtsProperties.USER_NAME.getName(), user.getUsername());
 		
 		Ticket ticket = btsExtension.submitTicket(postTicketRQ, integration);
 
