@@ -46,7 +46,13 @@ public interface GetProjectHandler {
 	 */
 	Iterable<UserResource> getProjectUsers(String projectName, Filter filter, Pageable pageable);
 
-	Project getProject(String name);
+	boolean exists(Long id);
+
+	Project get(ReportPortalUser.ProjectDetails projectDetails);
+
+	Project get(Long id);
+
+	Project get(String name);
 
 	/**
 	 * Find project entity without fetching related entities
@@ -63,7 +69,7 @@ public interface GetProjectHandler {
 	 * @param user        User
 	 * @return {@link ProjectResource}
 	 */
-	ProjectResource getProject(String projectName, ReportPortalUser user);
+	ProjectResource getResource(String projectName, ReportPortalUser user);
 
 	/**
 	 * Get list of specified usernames

@@ -39,6 +39,7 @@ logging:
     org.springframework.web.bind: fatal
     com.epam.ta.reportportal.ws.controller: debug
     com.epam.ta.reportportal.ws.rabbit: debug
+    org.elasticsearch.client.RestClient: error
 
 
 springfox:
@@ -60,6 +61,11 @@ rp:
       clean:
         items:
           size: 500
+      cluster:
+        item:
+          page-size: 20
+      item-analyze:
+        batch-size: 100
       log-index:
         batch-size: 20
       pattern-analysis:
@@ -80,10 +86,14 @@ rp:
             core: 5
             max: 10
             queue: 500
+          log-cluster:
+            core: 5
+            max: 10
+            queue: 500
           auto-analyze:
             core: 10
             max: 30
-            queue: 200
+            queue: 500
           pattern-analyze:
             core: 20
             max: 30
@@ -96,10 +106,16 @@ rp:
             core: 3
             max: 5
             queue: 100
+          event-listener:
+            core: 10
+            max: 20
+            queue: 1000
 
   amqp:
     addresses: amqp://${rp.amqp.user}:${rp.amqp.pass}@${rp.amqp.host}:${rp.amqp.port}
     api-address: http://${rp.amqp.apiuser}:${rp.amqp.apipass}@${rp.amqp.host}:${rp.amqp.apiport}/api
+    base-vhost: /
+    analyzer-vhost: analyzer
     host: rabbitmq
     port: 5672
     user:
@@ -109,7 +125,8 @@ rp:
     apipass:
     queues: 10
     queuesPerPod: 10
-    reply-timeout: 300000 #milliseconds
+    #TODO currently we wait for log clusterization finish that may last for ~20 mins
+    reply-timeout: 1200000 #milliseconds
 
   requestLogging: true
 

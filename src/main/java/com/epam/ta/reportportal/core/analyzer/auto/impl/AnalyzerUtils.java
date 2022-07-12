@@ -24,6 +24,7 @@ import com.epam.ta.reportportal.ws.model.analyzer.IndexLog;
 import com.epam.ta.reportportal.ws.model.analyzer.IndexTestItem;
 import com.epam.ta.reportportal.ws.model.analyzer.RelevantItemInfo;
 import com.epam.ta.reportportal.ws.model.project.AnalyzerConfig;
+import com.epam.ta.reportportal.ws.model.project.UniqueErrorConfig;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -58,6 +59,7 @@ public class AnalyzerUtils {
 			indexLog.setLogLevel(log.getLogLevel());
 		}
 		indexLog.setMessage(log.getLogMessage());
+		indexLog.setClusterId(log.getClusterId());
 		return indexLog;
 	};
 
@@ -69,7 +71,7 @@ public class AnalyzerUtils {
 	 * @param logs     Test item's logs
 	 * @return {@link IndexTestItem} object
 	 */
-	public static IndexTestItem fromTestItem(TestItem testItem, List<Log> logs) {
+	public static IndexTestItem fromTestItem(TestItem testItem) {
 		IndexTestItem indexTestItem = new IndexTestItem();
 		indexTestItem.setTestItemId(testItem.getItemId());
 		indexTestItem.setTestItemName(testItem.getName());
@@ -80,9 +82,6 @@ public class AnalyzerUtils {
 			indexTestItem.setIssueTypeLocator(testItem.getItemResults().getIssue().getIssueType().getLocator());
 			indexTestItem.setAutoAnalyzed(testItem.getItemResults().getIssue().getAutoAnalyzed());
 		}
-		if (!logs.isEmpty()) {
-			indexTestItem.setLogs(fromLogs(logs));
-		}
 		return indexTestItem;
 	}
 
@@ -92,16 +91,29 @@ public class AnalyzerUtils {
 
 	public static AnalyzerConfig getAnalyzerConfig(Project project) {
 		Map<String, String> configParameters = ProjectUtils.getConfigParameters(project.getProjectAttributes());
+		return getAnalyzerConfig(configParameters);
+	}
+
+	public static AnalyzerConfig getAnalyzerConfig(Map<String, String> configParameters) {
 		AnalyzerConfig analyzerConfig = new AnalyzerConfig();
 		analyzerConfig.setIsAutoAnalyzerEnabled(BooleanUtils.toBoolean(configParameters.get(AUTO_ANALYZER_ENABLED.getAttribute())));
 		analyzerConfig.setMinShouldMatch(Integer.valueOf(ofNullable(configParameters.get(MIN_SHOULD_MATCH.getAttribute())).orElse(
 				MIN_SHOULD_MATCH.getDefaultValue())));
+		analyzerConfig.setSearchLogsMinShouldMatch(Integer.valueOf(ofNullable(configParameters.get(SEARCH_LOGS_MIN_SHOULD_MATCH.getAttribute())).orElse(
+				SEARCH_LOGS_MIN_SHOULD_MATCH.getDefaultValue())));
 		analyzerConfig.setNumberOfLogLines(Integer.valueOf(ofNullable(configParameters.get(NUMBER_OF_LOG_LINES.getAttribute())).orElse(
 				NUMBER_OF_LOG_LINES.getDefaultValue())));
 		analyzerConfig.setIndexingRunning(BooleanUtils.toBoolean(configParameters.get(INDEXING_RUNNING.getAttribute())));
 		analyzerConfig.setAnalyzerMode(configParameters.get(AUTO_ANALYZER_MODE.getAttribute()));
 		analyzerConfig.setAllMessagesShouldMatch(BooleanUtils.toBoolean(configParameters.get(ALL_MESSAGES_SHOULD_MATCH.getAttribute())));
 		return analyzerConfig;
+	}
+
+	public static UniqueErrorConfig getUniqueErrorConfig(Map<String, String> configParameters) {
+		final UniqueErrorConfig uniqueErrorConfig = new UniqueErrorConfig();
+		uniqueErrorConfig.setEnabled(BooleanUtils.toBoolean(configParameters.get(AUTO_UNIQUE_ERROR_ANALYZER_ENABLED.getAttribute())));
+		uniqueErrorConfig.setRemoveNumbers(BooleanUtils.toBoolean(configParameters.get(UNIQUE_ERROR_ANALYZER_REMOVE_NUMBERS.getAttribute())));
+		return uniqueErrorConfig;
 	}
 
 	public static final Function<TestItem, RelevantItemInfo> TO_RELEVANT_ITEM_INFO = item -> {

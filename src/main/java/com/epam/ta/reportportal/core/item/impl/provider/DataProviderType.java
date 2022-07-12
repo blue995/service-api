@@ -27,7 +27,9 @@ public enum DataProviderType {
 
 	WIDGET_BASED("widget"),
 	LAUNCH_BASED("launch"),
-	FILTER_BASED("filter");
+	FILTER_BASED("filter"),
+	CLUSTER_BASED("cluster"),
+	BASELINE_BASED("baseline");
 
 	private final String type;
 

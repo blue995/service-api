@@ -18,6 +18,8 @@ package com.epam.ta.reportportal.core.analyzer.auto.client.impl;
 
 import com.epam.ta.reportportal.core.analyzer.auto.client.AnalyzerServiceClient;
 import com.epam.ta.reportportal.core.analyzer.auto.client.RabbitMqManagementClient;
+import com.epam.ta.reportportal.core.analyzer.auto.client.model.cluster.ClusterData;
+import com.epam.ta.reportportal.core.analyzer.auto.client.model.cluster.GenerateClustersRq;
 import com.epam.ta.reportportal.core.analyzer.auto.client.model.SuggestInfo;
 import com.epam.ta.reportportal.core.analyzer.auto.client.model.SuggestRq;
 import com.epam.ta.reportportal.exception.ReportPortalException;
@@ -30,11 +32,13 @@ import com.rabbitmq.http.client.domain.ExchangeInfo;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 import static com.epam.ta.reportportal.core.analyzer.auto.client.impl.AnalyzerUtils.*;
 import static java.util.stream.Collectors.toList;
@@ -47,16 +51,20 @@ public class AnalyzerServiceClientImpl implements AnalyzerServiceClient {
 	private static final String SUGGEST_ROUTE = "suggest";
 	private static final String SUGGEST_INFO_ROUTE = "index_suggest_info";
 	private static final String REMOVE_SUGGEST_ROUTE = "remove_suggest_info";
+	private static final String CLUSTER_ROUTE = "cluster";
 
 	private final RabbitMqManagementClient rabbitMqManagementClient;
 
 	private final RabbitTemplate rabbitTemplate;
 
+	private String virtualHost;
+
 	@Autowired
 	public AnalyzerServiceClientImpl(RabbitMqManagementClient rabbitMqManagementClient,
-			@Qualifier("analyzerRabbitTemplate") RabbitTemplate rabbitTemplate) {
+			@Qualifier("analyzerRabbitTemplate") RabbitTemplate rabbitTemplate, @Value("${rp.amqp.analyzer-vhost}") String virtualHost) {
 		this.rabbitMqManagementClient = rabbitMqManagementClient;
 		this.rabbitTemplate = rabbitTemplate;
+		this.virtualHost = virtualHost;
 	}
 
 	@Override
@@ -74,11 +82,7 @@ public class AnalyzerServiceClientImpl implements AnalyzerServiceClient {
 
 	@Override
 	public List<SearchRs> searchLogs(SearchRq rq) {
-		String exchangeName = rabbitMqManagementClient.getAnalyzerExchangesInfo()
-				.stream()
-				.filter(DOES_SUPPORT_SEARCH)
-				.min(Comparator.comparingInt(EXCHANGE_PRIORITY))
-				.map(ExchangeInfo::getName)
+		String exchangeName = resolveExchangeName(DOES_SUPPORT_SEARCH)
 				.orElseThrow(() -> new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
 						"There are no analyzer services with search logs support deployed."
 				));
@@ -88,11 +92,7 @@ public class AnalyzerServiceClientImpl implements AnalyzerServiceClient {
 
 	@Override
 	public void removeSuggest(Long projectId) {
-		rabbitMqManagementClient.getAnalyzerExchangesInfo()
-				.stream()
-				.filter(DOES_SUPPORT_SUGGEST)
-				.min(Comparator.comparingInt(EXCHANGE_PRIORITY))
-				.map(ExchangeInfo::getName)
+		resolveExchangeName(DOES_SUPPORT_SUGGEST)
 				.ifPresent(suggestExchange -> rabbitTemplate.convertAndSend(suggestExchange, REMOVE_SUGGEST_ROUTE, projectId));
 	}
 
@@ -107,12 +107,25 @@ public class AnalyzerServiceClientImpl implements AnalyzerServiceClient {
 		rabbitTemplate.convertAndSend(getSuggestExchangeName(), SUGGEST_INFO_ROUTE, suggestInfos);
 	}
 
-	private String getSuggestExchangeName() {
+	@Override
+	public ClusterData generateClusters(GenerateClustersRq generateClustersRq) {
+		final String exchangeName = resolveExchangeName(DOES_SUPPORT_CLUSTER).orElseThrow(() -> new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
+				"There are no analyzer services with clusters creation support deployed."
+		));
+		return rabbitTemplate.convertSendAndReceiveAsType(exchangeName, CLUSTER_ROUTE, generateClustersRq, new ParameterizedTypeReference<>() {
+		});
+	}
+
+	private Optional<String> resolveExchangeName(Predicate<ExchangeInfo> supportCondition) {
 		return rabbitMqManagementClient.getAnalyzerExchangesInfo()
 				.stream()
-				.filter(DOES_SUPPORT_SUGGEST)
+				.filter(supportCondition)
 				.min(Comparator.comparingInt(EXCHANGE_PRIORITY))
-				.map(ExchangeInfo::getName)
+				.map(ExchangeInfo::getName);
+	}
+
+	private String getSuggestExchangeName() {
+		return resolveExchangeName(DOES_SUPPORT_SUGGEST)
 				.orElseThrow(() -> new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
 						"There are no analyzer services with suggest items support deployed."
 				));
@@ -126,7 +139,7 @@ public class AnalyzerServiceClientImpl implements AnalyzerServiceClient {
 				}
 		);
 		if (!CollectionUtils.isEmpty(result)) {
-			resultMap.put((String) exchangeInfo.getArguments().getOrDefault(ANALYZER_KEY, exchangeInfo.getName()), result);
+			resultMap.put((String) exchangeInfo.getArguments().getOrDefault(virtualHost, exchangeInfo.getName()), result);
 			removeAnalyzedFromRq(rq, result);
 		}
 	}

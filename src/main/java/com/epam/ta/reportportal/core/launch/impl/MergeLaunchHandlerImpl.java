@@ -21,7 +21,7 @@ import com.epam.ta.reportportal.commons.ReportPortalUser;
 import com.epam.ta.reportportal.commons.validation.Suppliers;
 import com.epam.ta.reportportal.core.analyzer.auto.LogIndexer;
 import com.epam.ta.reportportal.core.analyzer.auto.impl.AnalyzerUtils;
-import com.epam.ta.reportportal.core.analyzer.auto.impl.LaunchPreparerService;
+import com.epam.ta.reportportal.core.analyzer.auto.impl.preparer.LaunchPreparerService;
 import com.epam.ta.reportportal.core.item.impl.merge.strategy.LaunchMergeFactory;
 import com.epam.ta.reportportal.core.item.impl.merge.strategy.MergeStrategyType;
 import com.epam.ta.reportportal.core.launch.MergeLaunchHandler;
@@ -29,7 +29,6 @@ import com.epam.ta.reportportal.core.statistics.StatisticsHelper;
 import com.epam.ta.reportportal.dao.LaunchRepository;
 import com.epam.ta.reportportal.dao.ProjectRepository;
 import com.epam.ta.reportportal.dao.TestItemRepository;
-import com.epam.ta.reportportal.entity.item.TestItem;
 import com.epam.ta.reportportal.entity.launch.Launch;
 import com.epam.ta.reportportal.entity.project.Project;
 import com.epam.ta.reportportal.entity.project.ProjectRole;
@@ -117,9 +116,7 @@ public class MergeLaunchHandlerImpl implements MergeLaunchHandler {
 
 		launchRepository.deleteAll(launchesList);
 
-		List<TestItem> newItems = testItemRepository.findTestItemsByLaunchId(newLaunch.getId());
-		launchPreparerService.prepare(newLaunch, newItems, AnalyzerUtils.getAnalyzerConfig(project))
-				.ifPresent(it -> logIndexer.indexPreparedLogs(project.getId(), it));
+		logIndexer.indexLaunchLogs(newLaunch, AnalyzerUtils.getAnalyzerConfig(project));
 
 		return launchConverter.TO_RESOURCE.apply(newLaunch);
 	}

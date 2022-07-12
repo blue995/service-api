@@ -1,8 +1,9 @@
 package com.epam.ta.reportportal.core.analyzer.auto.indexer;
 
 import com.epam.ta.reportportal.core.analyzer.auto.client.IndexerServiceClient;
-import com.epam.ta.reportportal.core.analyzer.auto.impl.LaunchPreparerService;
+import com.epam.ta.reportportal.core.analyzer.auto.impl.preparer.LaunchPreparerService;
 import com.epam.ta.reportportal.dao.LaunchRepository;
+import com.epam.ta.reportportal.dao.TestItemRepository;
 import com.epam.ta.reportportal.jooq.enums.JLaunchModeEnum;
 import com.epam.ta.reportportal.jooq.enums.JStatusEnum;
 import com.epam.ta.reportportal.ws.model.analyzer.IndexLaunch;
@@ -10,7 +11,11 @@ import com.epam.ta.reportportal.ws.model.analyzer.IndexTestItem;
 import com.epam.ta.reportportal.ws.model.project.AnalyzerConfig;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static com.epam.ta.reportportal.entity.AnalyzeMode.ALL_LAUNCHES;
 import static org.mockito.ArgumentMatchers.*;
@@ -22,12 +27,68 @@ class BatchLogIndexerTest {
 
 	private IndexerServiceClient indexerServiceClient = mock(IndexerServiceClient.class);
 	private LaunchRepository launchRepository = mock(LaunchRepository.class);
+	private TestItemRepository testItemRepository = mock(TestItemRepository.class);
 	private LaunchPreparerService launchPreparerService = mock(LaunchPreparerService.class);
 
-	private final BatchLogIndexer batchLogIndexer = new BatchLogIndexer(batchSize, launchRepository, launchPreparerService, indexerServiceClient);
+	private final BatchLogIndexer batchLogIndexer = new BatchLogIndexer(batchSize,
+			batchSize,
+			launchRepository,
+			testItemRepository,
+			launchPreparerService,
+			indexerServiceClient
+	);
 
 	@Test
-	void index() {
+	void indexWhenHasErrorLogs() {
+
+		final List<Long> firstPortionIds = List.of(1L, 2L);
+		final List<Long> secondPortionIds = List.of(3L);
+		when(launchRepository.findIdsByProjectIdAndModeAndStatusNotEq(eq(1L),
+				any(JLaunchModeEnum.class),
+				any(JStatusEnum.class),
+				anyInt()
+		)).thenReturn(firstPortionIds);
+		when(launchRepository.hasItemsWithLogsWithLogLevel(eq(1L), anyList(), anyInt())).thenReturn(true);
+		when(launchRepository.hasItemsWithLogsWithLogLevel(eq(2L), anyList(), anyInt())).thenReturn(true);
+		when(launchRepository.hasItemsWithLogsWithLogLevel(eq(3L), anyList(), anyInt())).thenReturn(true);
+
+		final IndexLaunch firstIndex = new IndexLaunch();
+		final List<IndexTestItem> firstIndexItems = List.of(new IndexTestItem());
+		firstIndex.setTestItems(firstIndexItems);
+		final IndexLaunch secondIndex = new IndexLaunch();
+		final List<IndexTestItem> secondIndexItems = List.of(new IndexTestItem());
+		secondIndex.setTestItems(secondIndexItems);
+		when(launchPreparerService.prepare(eq(firstPortionIds), any(AnalyzerConfig.class))).thenReturn(List.of(firstIndex, secondIndex));
+
+		when(launchRepository.findIdsByProjectIdAndModeAndStatusNotEqAfterId(eq(1L),
+				any(JLaunchModeEnum.class),
+				any(JStatusEnum.class),
+				eq(2L),
+				anyInt()
+		)).thenReturn(secondPortionIds);
+
+		final IndexLaunch thirdIndex = new IndexLaunch();
+		final List<IndexTestItem> thirdIndexItems = List.of(new IndexTestItem(), new IndexTestItem(), new IndexTestItem());
+		thirdIndex.setTestItems(thirdIndexItems);
+		when(launchPreparerService.prepare(eq(secondPortionIds), any(AnalyzerConfig.class))).thenReturn(List.of(thirdIndex));
+
+		batchLogIndexer.index(1L, analyzerConfig());
+
+		final int expectedIndexedTimes = Stream.of(firstIndexItems, secondIndexItems, thirdIndexItems)
+				.map(Collection::size)
+				.mapToInt(this::getIndexedTimes)
+				.sum();
+
+		verify(indexerServiceClient, times(expectedIndexedTimes)).index(anyList());
+
+	}
+
+	private int getIndexedTimes(int expectedIndexedItems) {
+		return BigDecimal.valueOf(expectedIndexedItems).divide(BigDecimal.valueOf(batchSize), RoundingMode.CEILING).intValue();
+	}
+
+	@Test
+	void indexWhenLaunchHasNoErrorLogs() {
 
 		final List<Long> ids = List.of(1L, 2L);
 		when(launchRepository.findIdsByProjectIdAndModeAndStatusNotEq(eq(1L),
@@ -35,31 +96,13 @@ class BatchLogIndexerTest {
 				any(JStatusEnum.class),
 				anyInt()
 		)).thenReturn(ids);
-
-		final IndexLaunch firstIndex = new IndexLaunch();
-		final IndexLaunch secondIndex = new IndexLaunch();
-
-		when(launchRepository.findIndexLaunchByIdsAndLogLevel(eq(ids), anyInt())).thenReturn(List.of(firstIndex, secondIndex));
-
-		final List<Long> secondPortionIds = List.of(3L);
-		when(launchRepository.findIdsByProjectIdAndModeAndStatusNotEqAfterId(eq(1L),
-				any(JLaunchModeEnum.class),
-				any(JStatusEnum.class),
-				eq(2L),
-				anyInt()
-		)).thenReturn(secondPortionIds);
-		final IndexLaunch thirdIndex = new IndexLaunch();
-		when(launchRepository.findIndexLaunchByIdsAndLogLevel(eq(secondPortionIds), anyInt())).thenReturn(List.of(thirdIndex));
-
-		doAnswer(invocation -> {
-			Object[] args = invocation.getArguments();
-			((IndexLaunch) args[0]).setTestItems(List.of(new IndexTestItem()));
-			return null;
-		}).when(launchPreparerService).fillLaunch(any(IndexLaunch.class));
+		when(launchRepository.hasItemsWithLogsWithLogLevel(eq(1L), anyList(), anyInt())).thenReturn(false);
+		when(launchRepository.hasItemsWithLogsWithLogLevel(eq(2L), anyList(), anyInt())).thenReturn(false);
 
 		batchLogIndexer.index(1L, analyzerConfig());
 
-		verify(indexerServiceClient, times(2)).index(anyList());
+		verify(launchPreparerService, times(0)).prepare(anyList(), any(AnalyzerConfig.class));
+		verify(indexerServiceClient, times(0)).index(anyList());
 
 	}
 
