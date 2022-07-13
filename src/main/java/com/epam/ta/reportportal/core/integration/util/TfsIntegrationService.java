@@ -34,50 +34,47 @@ import java.util.Optional;
  * @author <a href="mailto:ivan_budayeu@epam.com">Ivan Budayeu</a>
  */
 @Service
-public class TfsIntegrationService extends AbstractBtsIntegrationService {
+public class TfsIntegrationService extends BasicIntegrationServiceImpl {
 
+	private BtsIntegrationService btsIntegrationService;
 
 	@Autowired
-	public TfsIntegrationService(IntegrationRepository integrationRepository, PluginBox pluginBox, BasicTextEncryptor basicTextEncryptor) {
+	public TfsIntegrationService(IntegrationRepository integrationRepository, PluginBox pluginBox, BtsIntegrationService btsIntegrationService) {
 		super(integrationRepository, pluginBox);
+		this.btsIntegrationService = btsIntegrationService;
 	}
 
 	@Override
-	public Map<String, Object> retrieveIntegrationParams(Map<String, Object> integrationParams) {
-		BusinessRule.expect(integrationParams, MapUtils::isNotEmpty).verify(ErrorType.BAD_REQUEST_ERROR, "No integration params provided");
-
+	public Map<String, Object> retrieveCreateParams(String integrationType, Map<String, Object> integrationParams) {
+		expect(integrationParams, MapUtils::isNotEmpty).verify(ErrorType.BAD_REQUEST_ERROR, "No integration params provided");
+		
 		Map<String, Object> resultParams = Maps.newHashMapWithExpectedSize(BtsProperties.values().length);
 
-		//// [TB]: Not necessary for TFS (ATM)
-		// BtsProperties.AUTH_TYPE.getParam(integrationParams).ifPresent(authName -> {
-		// 	AuthType authType = AuthType.findByName(authName)
-		// 			.orElseThrow(() -> new ReportPortalException(ErrorType.INCORRECT_AUTHENTICATION_TYPE, authName));
+		resultParams.put(BtsProperties.PROJECT.getName(),
+				BtsProperties.PROJECT.getParam(integrationParams)
+						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "TFS project is not specified."))
+		);
+		resultParams.put(BtsProperties.URL.getName(),
+				BtsProperties.URL.getParam(integrationParams)
+						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "TFS url is not specified."))
+		);
 
-		// 	if (AuthType.BASIC.equals(authType)) {
-		// 		resultParams.put(BtsProperties.USER_NAME.getName(),
-		// 				BtsProperties.USER_NAME.getParam(integrationParams)
-		// 						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION,
-		// 								"Username value cannot be NULL"
-		// 						))
-		// 		);
+		resultParams.put(BtsProperties.ATTACHMENT_URL.getName(),
+				BtsProperties.ATTACHMENT_URL.getParam(integrationParams)
+						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "TFS attachment server url is not specified."))
+		);
 
-		// 		String encryptedPassword = basicTextEncryptor.encrypt(BtsProperties.PASSWORD.getParam(integrationParams)
-		// 				.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "Password value cannot be NULL")));
+		resultParams.put(BtsProperties.USER_NAME.getName(),
+				BtsProperties.USER_NAME.getParam(integrationParams)
+						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "TFS user name is not specified."))
+		);
 
-		// 		resultParams.put(BtsProperties.PASSWORD.getName(), encryptedPassword);
+		return resultParams;
+	}
 
-		// 	} else if (AuthType.OAUTH.equals(authType)) {
-		// 		final String encryptedAccessKey = basicTextEncryptor.encrypt(BtsProperties.OAUTH_ACCESS_KEY.getParam(integrationParams)
-		// 				.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "AccessKey value cannot be NULL")));
-		// 		resultParams.put(BtsProperties.OAUTH_ACCESS_KEY.getName(), encryptedAccessKey);
-		// 	} else {
-		// 		throw new ReportPortalException(ErrorType.UNABLE_INTERACT_WITH_INTEGRATION,
-		// 				"Unsupported auth type for TFS integration - " + authType.name()
-		// 		);
-		// 	}
-
-		// 	resultParams.put(BtsProperties.AUTH_TYPE.getName(), authName);
-		// });
+	@Override
+	public Map<String, Object> retrieveUpdatedParams(String integrationType, Map<String, Object> integrationParams) {
+		Map<String, Object> resultParams = Maps.newHashMapWithExpectedSize(BtsProperties.values().length);
 
 		BtsProperties.PROJECT.getParam(integrationParams)
 				.ifPresent(btsProject -> resultParams.put(BtsProperties.PROJECT.getName(), btsProject));
