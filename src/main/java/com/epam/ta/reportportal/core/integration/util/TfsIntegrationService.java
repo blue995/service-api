@@ -68,11 +68,6 @@ public class TfsIntegrationService extends BasicIntegrationServiceImpl {
 						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "TFS attachment server url is not specified."))
 		);
 
-		resultParams.put(BtsProperties.USER_NAME.getName(),
-				BtsProperties.USER_NAME.getParam(integrationParams)
-						.orElseThrow(() -> new ReportPortalException(UNABLE_INTERACT_WITH_INTEGRATION, "TFS user name is not specified."))
-		);
-
 		return resultParams;
 	}
 
