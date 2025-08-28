@@ -1,9 +1,10 @@
-FROM adoptopenjdk:11-jdk-hotspot-bionic as builder
+FROM eclipse-temurin:21-jdk as builder
 
 RUN apt-get update && apt-get install ca-certificates git fonts-noto zip -y
 
-RUN addgroup -system --gid 1000 rp-builder
-RUN adduser --disabled-password --system --ingroup rp-builder --uid 1000 --shell /bin/bash rp-builder
+RUN addgroup -system --gid 1001 rp-builder
+RUN adduser --disabled-password --system --ingroup rp-builder --uid 1001 --shell /bin/bash rp-builder
+RUN usermod -d /home/rp-builder rp-builder
 
 USER rp-builder
 WORKDIR /home/rp-builder
@@ -11,6 +12,8 @@ WORKDIR /home/rp-builder
 ### Copy gradle wrapper's stuff to init and cache gradle wrapper
 COPY --chown=rp-builder gradle/ ./gradle/
 COPY --chown=rp-builder gradlew*  ./
+COPY --chown=rp-builder *.gradle gradle.properties ./
+RUN ls
 RUN ./gradlew wrapper
 
 ARG buildNumber=0.0.1-SNAPSHOT
@@ -18,7 +21,6 @@ ARG sealightsSession=
 ARG sealightsToken=
 
 ### Copy gradle build files to resolve and cache dependencies
-COPY --chown=rp-builder *.gradle gradle.properties ./
 RUN ./gradlew resolveDependencies -P sealightsToken=${sealightsToken} --stacktrace
 
 ### Copy source and run build
