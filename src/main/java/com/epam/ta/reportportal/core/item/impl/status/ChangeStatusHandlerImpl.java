@@ -19,6 +19,7 @@ package com.epam.ta.reportportal.core.item.impl.status;
 import static com.epam.ta.reportportal.entity.enums.StatusEnum.FAILED;
 import static com.epam.ta.reportportal.entity.enums.StatusEnum.INFO;
 import static com.epam.ta.reportportal.entity.enums.StatusEnum.PASSED;
+import static com.epam.ta.reportportal.entity.enums.StatusEnum.SKIPPED;
 import static com.epam.ta.reportportal.entity.enums.StatusEnum.WARN;
 import static com.epam.ta.reportportal.ws.converter.converters.TestItemConverter.TO_ACTIVITY_RESOURCE;
 import static java.util.Optional.ofNullable;
@@ -34,7 +35,7 @@ import com.epam.ta.reportportal.entity.item.TestItem;
 import com.epam.ta.reportportal.entity.item.issue.IssueEntity;
 import com.epam.ta.reportportal.entity.launch.Launch;
 import com.epam.ta.reportportal.jooq.enums.JStatusEnum;
-import com.epam.ta.reportportal.ws.model.activity.TestItemActivityResource;
+import com.epam.ta.reportportal.model.activity.TestItemActivityResource;
 import com.google.common.collect.Lists;
 import java.util.Map;
 import java.util.Optional;
@@ -55,8 +56,8 @@ public class ChangeStatusHandlerImpl implements ChangeStatusHandler {
 
   @Autowired
   public ChangeStatusHandlerImpl(TestItemRepository testItemRepository,
-      IssueEntityRepository issueEntityRepository,
-      MessageBus messageBus, LaunchRepository launchRepository,
+      IssueEntityRepository issueEntityRepository, MessageBus messageBus,
+      LaunchRepository launchRepository,
       Map<StatusEnum, StatusChangingStrategy> statusChangingStrategyMapping) {
     this.testItemRepository = testItemRepository;
     this.issueEntityRepository = issueEntityRepository;
@@ -77,11 +78,10 @@ public class ChangeStatusHandlerImpl implements ChangeStatusHandler {
         if (parent.getItemResults().getStatus() != resolvedStatus) {
           TestItemActivityResource before = TO_ACTIVITY_RESOURCE.apply(parent, projectId);
           changeStatus(parent, resolvedStatus, user);
-          messageBus.publishActivity(new TestItemStatusChangedEvent(before,
-              TO_ACTIVITY_RESOURCE.apply(parent, projectId),
-              user.getUserId(),
-              user.getUsername()
-          ));
+          messageBus.publishActivity(
+              new TestItemStatusChangedEvent(before, TO_ACTIVITY_RESOURCE.apply(parent, projectId),
+                  user.getUserId(), user.getUsername()
+              ));
           changeParentStatus(parent, projectId, user);
         }
 
@@ -93,6 +93,7 @@ public class ChangeStatusHandlerImpl implements ChangeStatusHandler {
     return parent.getItemResults().getStatus() != StatusEnum.IN_PROGRESS
         && parent.getItemResults().getStatus() != PASSED
         && parent.getItemResults().getStatus() != FAILED
+        && parent.getItemResults().getStatus() != SKIPPED
         && !testItemRepository.hasItemsInStatusByParent(parent.getItemId(), parent.getPath(),
         StatusEnum.IN_PROGRESS.name());
   }
@@ -100,17 +101,16 @@ public class ChangeStatusHandlerImpl implements ChangeStatusHandler {
   private StatusEnum resolveStatus(Long itemId) {
     return
         testItemRepository.hasDescendantsNotInStatus(itemId, StatusEnum.PASSED.name(), INFO.name(),
-            WARN.name()) ?
-            FAILED :
-            PASSED;
+            WARN.name()
+        ) ? FAILED : PASSED;
   }
 
   private void changeStatus(TestItem parent, StatusEnum resolvedStatus, ReportPortalUser user) {
     if (parent.isHasChildren() || !parent.isHasStats()) {
       parent.getItemResults().setStatus(resolvedStatus);
     } else {
-      Optional<StatusChangingStrategy> statusChangingStrategy = ofNullable(
-          statusChangingStrategyMapping.get(resolvedStatus));
+      Optional<StatusChangingStrategy> statusChangingStrategy =
+          ofNullable(statusChangingStrategyMapping.get(resolvedStatus));
       if (statusChangingStrategy.isPresent()) {
         statusChangingStrategy.get().changeStatus(parent, resolvedStatus, user, false);
       } else {
@@ -124,11 +124,10 @@ public class ChangeStatusHandlerImpl implements ChangeStatusHandler {
   public void changeLaunchStatus(Launch launch) {
     if (launch.getStatus() != StatusEnum.IN_PROGRESS) {
       if (!launchRepository.hasItemsInStatuses(launch.getId(),
-          Lists.newArrayList(JStatusEnum.IN_PROGRESS))) {
+          Lists.newArrayList(JStatusEnum.IN_PROGRESS)
+      )) {
         StatusEnum launchStatus = launchRepository.hasRootItemsWithStatusNotEqual(launch.getId(),
-            StatusEnum.PASSED.name(),
-            INFO.name(),
-            WARN.name()
+            StatusEnum.PASSED.name(), INFO.name(), WARN.name()
         ) ? FAILED : PASSED;
         launch.setStatus(launchStatus);
       }

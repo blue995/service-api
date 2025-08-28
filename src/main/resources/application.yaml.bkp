@@ -1,0 +1,193 @@
+spring:
+  application:
+    name: api
+    quartz:
+      #      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.dataSource: dataSource
+      org.quartz.jobStore.tablePrefix: quartz.scheduler_
+      org.quartz.threadPool.threadCount: "1"
+      org.quartz.jobStore.isClustered: "true"
+      org.quartz.jobStore.clusterCheckinInterval: "180000"
+      org.quartz.scheduler.instanceId: ${spring.application.name}:${vcap.application.instance_id:${spring.application.instance_id:${random.value}}}
+      org.quartz.scheduler.instanceName: reportportal
+      org.quartz.scheduler.classLoadHelper.class: com.epam.ta.reportportal.core.configs.ReportPortalClassLoadHelper
+
+  jpa:
+    properties:
+      hibernate:
+        dialect: com.epam.ta.reportportal.store.commons.JsonbAwarePostgresDialect
+        jdbc.lob.non_contextual_creation: true
+    generate-ddl: false
+    hibernate:
+      ddl-auto: none
+
+  rabbitmq:
+    addresses: ${rp.amqp.addresses}
+
+server:
+  connection-timeout: 30000
+  port: 8585
+  servlet:
+    context-path: "/"
+
+logging:
+  level:
+    org.hibernate: info
+    org.hibernate.stat: info
+    org.springframework.security: info
+    org.springframework.web.bind: fatal
+    com.epam.ta.reportportal.ws.controller: debug
+    com.epam.ta.reportportal.ws.rabbit: debug
+    org.elasticsearch.client.RestClient: error
+
+
+springdoc:
+  api-docs:
+    path: /v1/api-docs
+  writer-with-order-by-keys: true
+
+
+#### Custom ReportPortal Properties ######
+##########################################
+rp:
+  attachments:
+    recalculate: false
+  environment:
+    variable:
+      flushing:
+        time: PT24H
+      clean:
+        items:
+          size: 500
+      cluster:
+        item:
+          page-size: 20
+      item-analyze:
+        batch-size: 100
+      log-index:
+        batch-size: 20
+      pattern-analysis:
+        batch-size: 100
+        consumers-count: 2
+        prefetch-count: 0
+        single-item: true
+      elements-counter:
+        batch-size: 50
+      history:
+        old: false
+      demo:
+        source: 001_launch.json,002_launch.json,003_launch.json,004_launch.json,005_launch.json
+        attachment:
+          probability: 20
+      executor:
+        pool:
+          save-logs:
+            core: 20
+            max: 100
+            queue: 5000
+          log-index:
+            core: 5
+            max: 10
+            queue: 500
+          log-cluster:
+            core: 5
+            max: 10
+            queue: 500
+          auto-analyze:
+            core: 10
+            max: 30
+            queue: 500
+          demo-data:
+            core: 10
+            max: 20
+            queue: 50
+          widget-view:
+            core: 3
+            max: 5
+            queue: 100
+          event-listener:
+            core: 10
+            max: 20
+            queue: 1000
+          user-email:
+            core: 5
+            max: 10
+            queue: 1000
+
+  amqp:
+    addresses: amqp://${rp.amqp.user}:${rp.amqp.pass}@${rp.amqp.host}:${rp.amqp.port}
+    api-address: http://${rp.amqp.apiuser}:${rp.amqp.apipass}@${rp.amqp.host}:${rp.amqp.apiport}/api
+    base-vhost: /
+    analyzer-vhost: analyzer
+    host: rabbitmq
+    port: 5672
+    user:
+    pass:
+    apiport: 15672
+    apiuser:
+    apipass:
+    queues: 10
+    #TODO currently we wait for log clusterization finish that may last for ~20 mins
+    reply-timeout: 1200000 #milliseconds
+
+  feature:
+    flags:
+
+  requestLogging: true
+
+  jwt:
+    signing-key:
+
+
+  jobs:
+    baseUrl: http://jobs:8686
+
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driverClassName: org.postgresql.Driver
+    jdbcUrl: ${rp.db.url}
+    username: ${rp.db.user}
+    password: ${rp.db.pass}
+    maximumPoolSize: 27
+
+  db:
+    url: jdbc:postgresql://${rp.db.host}:${rp.db.port}/${rp.db.name}
+    name: reportportal
+    host: postgres
+    port: 5432
+    user:
+    pass:
+
+  upload:
+    maxUploadSize: 128MB
+    maxFileSize: 64MB
+  analytics:
+    enableByDefault: true
+  plugins:
+    rootDir: /tmp/plugins
+    path: ${rp.plugins.rootDir}/resolved
+    resources:
+      path: ${rp.plugins.rootDir}/resources
+      public: public
+    temp:
+      path: ${rp.plugins.rootDir}/temp
+  binarystore:
+    thumbnail:
+      attachment:
+        width: 100
+        height: 55
+      avatar:
+        width: 40
+        height: 50
+
+datastore:
+  path: /data/storage
+  type: minio
+  endpoint: http://play.min.io
+  accessKey:
+  secretKey:
+  bucketPrefix: prj-
+  bucketPostfix:
+  defaultBucketName: rp-bucket
+  region: us-west-1
