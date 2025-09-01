@@ -13,7 +13,7 @@ WORKDIR /home/rp-builder
 COPY --chown=rp-builder gradle/ ./gradle/
 COPY --chown=rp-builder gradlew*  ./
 COPY --chown=rp-builder *.gradle gradle.properties ./
-RUN ls
+COPY --chown=rp-builder api-registry/ ./api-registry/
 RUN ./gradlew wrapper
 
 ARG buildNumber=0.0.1-SNAPSHOT
@@ -27,7 +27,7 @@ RUN ./gradlew resolveDependencies -P sealightsToken=${sealightsToken} --stacktra
 COPY --chown=rp-builder src/ ./src/
 COPY --chown=rp-builder .git/ .git/
 
-RUN ./gradlew build -x jacocoTestReport -P gcp -P buildNumber=${buildNumber} -P sealightsToken=${sealightsToken} -P sealightsSession=${sealightsSession} --full-stacktrace
+RUN ./gradlew build -P gcp -P buildNumber=${buildNumber} -P sealightsToken=${sealightsToken} -P sealightsSession=${sealightsSession} --full-stacktrace
 
 RUN mkdir -p /home/rp-builder/plugins && \
     curl -o /home/rp-builder/plugins/sealights.zip https://agents.sealights.co/sealights-java/sealights-java-latest.zip && \
