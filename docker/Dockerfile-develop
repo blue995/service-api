@@ -1,73 +1,22 @@
-FROM eclipse-temurin:21-jdk as builder
+FROM --platform=$BUILDPLATFORM gradle:8.10.0-jdk21-alpine AS build
+ARG RELEASE_MODE
+ARG APP_VERSION
+WORKDIR /usr/app
+COPY . /usr/app
+RUN if [ "${RELEASE_MODE}" = true ]; then \
+    gradle build --no-build-cache --exclude-task test \
+        -PreleaseMode=true \
+        -Dorg.gradle.project.version=${APP_VERSION}; \
+    else gradle build --no-build-cache --exclude-task test -Dorg.gradle.project.version=${APP_VERSION}; fi
 
-RUN apt-get update && apt-get install ca-certificates git fonts-noto zip -y
-
-RUN addgroup -system --gid 1001 rp-builder
-RUN adduser --disabled-password --system --ingroup rp-builder --uid 1001 --shell /bin/bash rp-builder
-RUN usermod -d /home/rp-builder rp-builder
-
-USER rp-builder
-WORKDIR /home/rp-builder
-
-### Copy gradle wrapper's stuff to init and cache gradle wrapper
-COPY --chown=rp-builder gradle/ ./gradle/
-COPY --chown=rp-builder gradlew*  ./
-COPY --chown=rp-builder *.gradle gradle.properties ./
-COPY --chown=rp-builder api-registry/ ./api-registry/
-RUN ./gradlew wrapper
-
-ARG buildNumber=0.0.1-SNAPSHOT
-ARG sealightsSession=
-ARG sealightsToken=
-
-### Copy gradle build files to resolve and cache dependencies
-RUN ./gradlew resolveDependencies -P sealightsToken=${sealightsToken} --stacktrace
-
-### Copy source and run build
-COPY --chown=rp-builder src/ ./src/
-COPY --chown=rp-builder .git/ .git/
-
-RUN ./gradlew build -P gcp -P buildNumber=${buildNumber} -P sealightsToken=${sealightsToken} -P sealightsSession=${sealightsSession} --full-stacktrace
-
-RUN mkdir -p /home/rp-builder/plugins && \
-    curl -o /home/rp-builder/plugins/sealights.zip https://agents.sealights.co/sealights-java/sealights-java-latest.zip && \
-    unzip /home/rp-builder/plugins/sealights.zip -d /home/rp-builder/plugins && \
-    mkdir -p /home/rp-builder/sealights && \
-    sh -c "echo '${sealightsToken}' > /home/rp-builder/sealights/sealights-token.txt" && \
-    sh -c "echo '${sealightsSession}' > /home/rp-builder/sealights/sealights-session.txt"
-
-FROM openjdk:11-jre-slim
-
-ARG version
-
-### Set quay.io image cache. Since the build is for development only,
-### there is no need to keep them forever
-### details: https://support.coreos.com/hc/en-us/articles/115001384693-Tag-Expiration
-LABEL quay.expires-after=1w
-
-LABEL maintainer="Andrei Varabyeu <andrei_varabyeu@epam.com>"
-LABEL version=${version}
-LABEL description="ReportPortal API Service: Development Version"
-
-RUN apt-get update && \
-    apt-get install fonts-noto-core -y
-
-RUN echo '#!/bin/sh \n exec java ${JAVA_OPTS} -jar ${APP_FILE}' > /start.sh && \
-    chmod +x /start.sh
-
-# Set default JAVA_OPTS and APP_FILE
-ENV JAVA_OPTS="-DLOG_FILE=app.log -Xmx2g -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp -Djava.security.egd=file:/dev/./urandom -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005"
-ENV APP_FILE=/app/app.jar
-
-VOLUME /tmp
-
-RUN mkdir plugins app
-COPY --from=builder /home/rp-builder/plugins/sl-test-listener.jar ./plugins/
-COPY --from=builder /home/rp-builder/sealights/sealights-token.txt /home/rp-builder/sealights/sealights-session.txt ./
-
-COPY --from=builder /home/rp-builder/build/libs/app.jar $APP_FILE
-
-RUN sh -c "touch $APP_FILE"
-
+FROM amazoncorretto:21.0.7
+LABEL version=${APP_VERSION} description="EPAM Report portal. Main API Service" maintainer="Andrei Varabyeu <andrei_varabyeu@epam.com>, Hleb Kanonik <hleb_kanonik@epam.com>"
+ARG APP_VERSION=${APP_VERSION}
+ENV APP_DIR=/usr/app
+ENV JAVA_OPTS="-Xmx1g -XX:+UseG1GC -XX:InitiatingHeapOccupancyPercent=70 -Djava.security.egd=file:/dev/./urandom "
+WORKDIR $APP_DIR
+COPY --from=build $APP_DIR/build/libs/service-api-*exec.jar .
+VOLUME ["/tmp"]
 EXPOSE 8080
-ENTRYPOINT /start.sh
+# ENTRYPOINT exec java ${JAVA_OPTS} -jar ${APP_DIR}/service-api-*exec.jar
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar ${APP_DIR}/service-api-*exec.jar"]
